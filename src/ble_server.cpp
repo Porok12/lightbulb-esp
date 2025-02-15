@@ -36,8 +36,8 @@ void initBLE()
     pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
-    NimBLEService *pService = pServer->createService("1234");
-    pCharacteristic = pService->createCharacteristic("5678", NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::READ);
+    NimBLEService *pService = pServer->createService(BLE_SERVICE_UUID);
+    pCharacteristic = pService->createCharacteristic(BLE_CHARACTERISTIC_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::READ);
 
     pService->start();
     pCharacteristic->setValue("Hello from ESP32-C3!");
