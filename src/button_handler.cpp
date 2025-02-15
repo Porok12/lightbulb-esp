@@ -1,5 +1,6 @@
 #include "button_handler.h"
 #include "config.h"
+#include "led_control.h"
 #include <Arduino.h>
 
 volatile bool buttonPressed = false;

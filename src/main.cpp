@@ -4,18 +4,21 @@
 #include "button_handler.h"
 #include <Arduino.h>
 
-void setup() {
-    Serial.begin(115200);
-    Serial.println("Initializing...");
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println("Initializing...");
 
-    setupButton();
-    initLEDs();
-    initBLE();
+  setupButton();
+  initLEDs();
+  initBLE();
 }
 
-void loop() {
-    if (buttonPressed) {
-        buttonPressed = false;
-        changeColor();
-    }
+void loop()
+{
+  if (buttonPressed)
+  {
+    buttonPressed = false;
+    switchToNextColor();
+  }
 }

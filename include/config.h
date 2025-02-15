@@ -16,4 +16,8 @@
 #define CMD_SET_COLOR_SETS 0x02 // Set multiple colors
 #define CMD_DISABLE_BLE 0x03    // Disable BLE
 
+// Storage namespace for Preferences API
+#define STORAGE_NAMESPACE "color_storage"
+#define MAX_COLOR_SETS 5 // Max stored color sets
+
 #endif

@@ -1,50 +1,91 @@
 #include "led_control.h"
 #include "config.h"
+#include <Preferences.h>
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
-int colorIndex = 0;
+Preferences preferences;
 
-void initLEDs() {
+uint8_t storedColors[MAX_COLOR_SETS][4];
+int storedColorCount = 0;
+int colorSetIndex = 0;
+
+void initLEDs()
+{
     strip.begin();
-    for (int i = 0; i < NUM_LEDS; i++) {
-        strip.setPixelColor(i, strip.Color(0, 0, 0, 255)); // Initialize to White
-    }
+    loadStoredColors();
     strip.show();
 }
 
-void changeColor() {
-    colorIndex = (colorIndex + 1) % 5;
+void loadStoredColors()
+{
+    preferences.begin(STORAGE_NAMESPACE, true);
+    int length = preferences.getInt("color_size", 0);
 
-    uint32_t color;
-    switch (colorIndex) {
-        case 0: color = strip.Color(255, 0, 0, 0); break;  // Red
-        case 1: color = strip.Color(0, 255, 0, 0); break;  // Green
-        case 2: color = strip.Color(0, 0, 255, 0); break;  // Blue
-        case 3: color = strip.Color(0, 0, 0, 255); break;  // White
-        case 4: color = strip.Color(0, 0, 0, 0); break;    // Off
+    if (length > 0 && length <= MAX_COLOR_SETS * 4)
+    {
+        preferences.getBytes("colors", storedColors, length);
+        storedColorCount = length / 4;
     }
-
-    for (int i = 0; i < NUM_LEDS; i++) {
-        strip.setPixelColor(i, color);
-    }
-    strip.show();
+    preferences.end();
 }
 
-void setColorFromHex(const std::string &hex) {
-    if (hex.length() != 4) {
-        for (int i = 0; i < NUM_LEDS; i++) {
-            strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
-        }
-        strip.show();
+void updateColorSets(const uint8_t *colorData, size_t length)
+{
+    if (length > MAX_COLOR_SETS * 4)
         return;
+
+    memcpy(storedColors, colorData, length); 
+    storedColorCount = length / 4;
+
+    saveColorSets(colorData, length);
+}
+
+void saveColorSets(const uint8_t *colorData, size_t length)
+{
+    preferences.begin(STORAGE_NAMESPACE, false);
+    preferences.putBytes("colors", colorData, length);
+    preferences.putInt("color_size", length);
+    preferences.end();
+}
+
+void switchToNextColor()
+{
+    if (storedColorCount == 0)
+        return;
+
+    colorSetIndex = (colorSetIndex + 1) % storedColorCount;
+    setColorFromBytes(storedColors[colorSetIndex]);
+}
+
+void switchToNextColorSet() {
+    if (storedColorCount == 0) return;
+
+    if (colorSetIndex < storedColorCount) {
+        setColorFromBytes(storedColors[colorSetIndex]);
+        colorSetIndex++;
+    } else {
+        turnOffLEDs();
+        colorSetIndex = 0;
     }
+}
 
-    int r = static_cast<uint8_t>(hex[0]);
-    int g = static_cast<uint8_t>(hex[1]);
-    int b = static_cast<uint8_t>(hex[2]);
-    int w = static_cast<uint8_t>(hex[3]);
-
+void turnOffLEDs() {
     for (int i = 0; i < NUM_LEDS; i++) {
+        strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
+    }
+    strip.show();
+}
+
+
+void setColorFromBytes(const uint8_t *colorData)
+{
+    uint8_t r = colorData[0];
+    uint8_t g = colorData[1];
+    uint8_t b = colorData[2];
+    uint8_t w = colorData[3];
+
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
         strip.setPixelColor(i, strip.Color(r, g, b, w));
     }
     strip.show();
