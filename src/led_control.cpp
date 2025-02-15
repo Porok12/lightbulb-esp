@@ -25,6 +25,13 @@ void loadStoredColors()
     {
         preferences.getBytes("colors", storedColors, length);
         storedColorCount = length / 4;
+    } else {
+        storedColorCount = 4;
+
+        storedColors[0][0] = 255; storedColors[0][1] = 0;   storedColors[0][2] = 0;   storedColors[0][3] = 0;     // Red
+        storedColors[1][0] = 0;   storedColors[1][1] = 255; storedColors[1][2] = 0;   storedColors[1][3] = 0;     // Green
+        storedColors[2][0] = 0;   storedColors[2][1] = 0;   storedColors[2][2] = 255; storedColors[2][3] = 0;     // Blue
+        storedColors[3][0] = 0;   storedColors[3][1] = 0;   storedColors[3][2] = 0;   storedColors[3][3] = 255;   // White
     }
     preferences.end();
 }
