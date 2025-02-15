@@ -1,18 +1,21 @@
+#include "config.h"
+#include "led_control.h"
+#include "ble_server.h"
+#include "button_handler.h"
 #include <Arduino.h>
 
-// put function declarations here:
-int myFunction(int, int);
-
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    Serial.begin(115200);
+    Serial.println("Initializing...");
+
+    setupButton();
+    initLEDs();
+    initBLE();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    if (buttonPressed) {
+        buttonPressed = false;
+        changeColor();
+    }
 }
