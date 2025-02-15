@@ -29,6 +29,14 @@ void loadStoredColors()
     preferences.end();
 }
 
+void saveColorSets(const uint8_t *colorData, size_t length)
+{
+    preferences.begin(STORAGE_NAMESPACE, false);
+    preferences.putBytes("colors", colorData, length);
+    preferences.putInt("color_size", length);
+    preferences.end();
+}
+
 void updateColorSets(const uint8_t *colorData, size_t length)
 {
     if (length > MAX_COLOR_SETS * 4)
@@ -40,14 +48,6 @@ void updateColorSets(const uint8_t *colorData, size_t length)
     saveColorSets(colorData, length);
 }
 
-void saveColorSets(const uint8_t *colorData, size_t length)
-{
-    preferences.begin(STORAGE_NAMESPACE, false);
-    preferences.putBytes("colors", colorData, length);
-    preferences.putInt("color_size", length);
-    preferences.end();
-}
-
 void switchToNextColor()
 {
     if (storedColorCount == 0)
@@ -55,6 +55,13 @@ void switchToNextColor()
 
     colorSetIndex = (colorSetIndex + 1) % storedColorCount;
     setColorFromBytes(storedColors[colorSetIndex]);
+}
+
+void turnOffLEDs() {
+    for (int i = 0; i < NUM_LEDS; i++) {
+        strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
+    }
+    strip.show();
 }
 
 void switchToNextColorSet() {
@@ -67,13 +74,6 @@ void switchToNextColorSet() {
         turnOffLEDs();
         colorSetIndex = 0;
     }
-}
-
-void turnOffLEDs() {
-    for (int i = 0; i < NUM_LEDS; i++) {
-        strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
-    }
-    strip.show();
 }
 
 
