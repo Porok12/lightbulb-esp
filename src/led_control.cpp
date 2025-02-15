@@ -55,15 +55,6 @@ void updateColorSets(const uint8_t *colorData, size_t length)
     saveColorSets(colorData, length);
 }
 
-void switchToNextColor()
-{
-    if (storedColorCount == 0)
-        return;
-
-    colorSetIndex = (colorSetIndex + 1) % storedColorCount;
-    setColorFromBytes(storedColors[colorSetIndex]);
-}
-
 void turnOffLEDs() {
     for (int i = 0; i < NUM_LEDS; i++) {
         strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
@@ -71,7 +62,7 @@ void turnOffLEDs() {
     strip.show();
 }
 
-void switchToNextColorSet() {
+void switchToNextColor() {
     if (storedColorCount == 0) return;
 
     if (colorSetIndex < storedColorCount) {
