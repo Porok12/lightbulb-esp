@@ -2,10 +2,17 @@
 #include "led_control.h"
 #include "config.h"
 #include <NimBLEDevice.h>
+//#include <NimBLEOta.h>
 
 NimBLEServer *pServer = nullptr;
-NimBLECharacteristic *pCharacteristic;
+NimBLECharacteristic *lightCharacteristic;
+NimBLECharacteristic *batteryCharacteristic;
+NimBLECharacteristic *firmwareCharacteristic;
+
+//static NimBLEOta bleOta;
+
 bool deviceConnected = false;
+uint8_t batteryLevel = 85; // Simulated battery percentage (0-100%)
 
 class MyServerCallbacks : public NimBLEServerCallbacks
 {
@@ -20,7 +27,7 @@ class MyServerCallbacks : public NimBLEServerCallbacks
     }
 };
 
-class MyCharacteristicCallbacks : public NimBLECharacteristicCallbacks
+class LightCharacteristicCallbacks : public NimBLECharacteristicCallbacks
 {
     void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override
     {
@@ -72,21 +79,42 @@ void initBLE()
     NimBLEDevice::init(DEVICE_NAME);
     NimBLEDevice::setPower(ESP_PWR_LVL_N0);
 
+    // NimBLEDevice::init("NimBLE OTA");
+    // bleOta.start();
+
     pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
-    NimBLEService *pService = pServer->createService(BLE_SERVICE_UUID);
-    pCharacteristic = pService->createCharacteristic(
-        BLE_CHARACTERISTIC_UUID,
+    // ✅ **Custom Light Control Service**
+    NimBLEService *lightService = pServer->createService(LIGHT_SERVICE_UUID);
+    lightCharacteristic = lightService->createCharacteristic(
+        LIGHT_CHARACTERISTIC_UUID,
         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR | NIMBLE_PROPERTY::READ);
+    lightCharacteristic->setCallbacks(new LightCharacteristicCallbacks());
+    lightService->start();
 
-    pService->start();
-    pCharacteristic->setValue("Hello from ESP32-C3!");
-    pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+    // ✅ **Battery Service (0x180F)**
+    NimBLEService *batteryService = pServer->createService(BATTERY_SERVICE_UUID);
+    batteryCharacteristic = batteryService->createCharacteristic(
+        BATTERY_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+    batteryCharacteristic->setValue(&batteryLevel, 1);
+    batteryService->start();
 
+    // ✅ **Device Information Service (0x180A)**
+    NimBLEService *deviceInfoService = pServer->createService(DEVICE_INFO_SERVICE_UUID);
+    firmwareCharacteristic = deviceInfoService->createCharacteristic(
+        FIRMWARE_VERSION_UUID,
+        NIMBLE_PROPERTY::READ);
+    firmwareCharacteristic->setValue(FIRMWARE_VERSION);
+    deviceInfoService->start();
+
+    // ✅ **BLE Advertising**
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->setName(DEVICE_NAME);
-    pAdvertising->addServiceUUID(pService->getUUID());
+    pAdvertising->addServiceUUID(lightService->getUUID());
+    pAdvertising->addServiceUUID(batteryService->getUUID());
+    pAdvertising->addServiceUUID(deviceInfoService->getUUID());
     pAdvertising->enableScanResponse(true);
     pAdvertising->start(0, 0);
 }
