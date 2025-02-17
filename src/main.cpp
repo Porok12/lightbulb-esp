@@ -18,7 +18,10 @@ void loop()
 {
   if (buttonPressed)
   {
+    Serial.println("🔘 Button Pressed! Switching Colors...");
     buttonPressed = false;
     switchToNextColor();
   }
+
+  delay(10);
 }

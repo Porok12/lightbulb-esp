@@ -5,5 +5,6 @@
 
 void initBLE();
 void disableBLE();
+void debugBLE();
 
 #endif
