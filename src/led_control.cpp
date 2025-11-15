@@ -11,6 +11,7 @@ int colorSetIndex = 0;
 
 void initLEDs()
 {
+    strip.setPin(LED_PIN);
     strip.begin();
     loadStoredColors();
     strip.show();
@@ -18,6 +19,8 @@ void initLEDs()
 
 void loadStoredColors()
 {
+    Serial.println("Loading stored color sets from storage...");
+
     preferences.begin(STORAGE_NAMESPACE, true);
     int length = preferences.getInt("color_size", 0);
 
@@ -38,6 +41,7 @@ void loadStoredColors()
 
 void saveColorSets(const uint8_t *colorData, size_t length)
 {
+    Serial.println("Saving color sets to storage...");
     preferences.begin(STORAGE_NAMESPACE, false);
     preferences.putBytes("colors", colorData, length);
     preferences.putInt("color_size", length);
@@ -46,6 +50,8 @@ void saveColorSets(const uint8_t *colorData, size_t length)
 
 void updateColorSets(const uint8_t *colorData, size_t length)
 {
+    Serial.println("Updating stored color sets...");
+
     if (length > MAX_COLOR_SETS * 4)
         return;
 
@@ -56,6 +62,8 @@ void updateColorSets(const uint8_t *colorData, size_t length)
 }
 
 void turnOffLEDs() {
+    Serial.println("Turning off LEDs.");
+
     for (int i = 0; i < NUM_LEDS; i++) {
         strip.setPixelColor(i, strip.Color(0, 0, 0, 0));
     }
@@ -63,6 +71,8 @@ void turnOffLEDs() {
 }
 
 void switchToNextColor() {
+    Serial.println("Switching to next color set...");
+
     if (storedColorCount == 0) return;
 
     if (colorSetIndex < storedColorCount) {
@@ -77,6 +87,8 @@ void switchToNextColor() {
 
 void setColorFromBytes(const uint8_t *colorData)
 {
+    Serial.println("Setting LED color...");
+
     uint8_t r = colorData[0];
     uint8_t g = colorData[1];
     uint8_t b = colorData[2];

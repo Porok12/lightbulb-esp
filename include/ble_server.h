@@ -6,5 +6,6 @@
 void initBLE();
 void disableBLE();
 void debugBLE();
+void updateBatteryLevelBLE();
 
 #endif

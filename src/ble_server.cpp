@@ -9,10 +9,34 @@ NimBLECharacteristic *lightCharacteristic;
 NimBLECharacteristic *batteryCharacteristic;
 NimBLECharacteristic *firmwareCharacteristic;
 
+//111
+#define ADC_MAX 4095           // 12-bit ADC
+#define VREF 1100              // mV (ESP32-C3 waha się 1050–1150)
+
+float readBatteryVoltage() {
+    int raw = analogRead(BAT_PIN);
+
+    float voltage_mv = ((float)raw / ADC_MAX) * VREF;   // mV na wejściu ADC
+    float real_battery_mv = voltage_mv * 2.0;           // dzielnik 100k/100k → *2
+
+    return real_battery_mv / 1000.0; // zwraca Volty
+}
+
+int batteryPercent(float v) {
+    if (v >= 4.20) return 100;
+    if (v >= 4.00) return 90;
+    if (v >= 3.85) return 75;
+    if (v >= 3.75) return 50;
+    if (v >= 3.65) return 25;
+    if (v >= 3.45) return 10;
+    return 0;
+}
+//111
+
 //static NimBLEOta bleOta;
 
 bool deviceConnected = false;
-uint8_t batteryLevel = 85; // Simulated battery percentage (0-100%)
+uint8_t batteryLevel = 0; // Simulated battery percentage (0-100%)
 
 class MyServerCallbacks : public NimBLEServerCallbacks
 {
@@ -190,4 +214,24 @@ void disableBLE()
     Serial.println("🔌 Disabling BLE Server...");
     pServer->getAdvertising()->stop();
     NimBLEDevice::deinit(true);
+}
+
+void updateBatteryLevelBLE()
+{
+    float voltage = readBatteryVoltage();
+    batteryLevel = batteryPercent(voltage);
+
+    Serial.print("🔋 Battery: ");
+    Serial.print(voltage, 3);
+    Serial.print("V (");
+    Serial.print(batteryLevel);
+    Serial.println("%)");
+
+    if (batteryCharacteristic)
+    {
+        batteryCharacteristic->setValue(&batteryLevel, 1);
+        if (deviceConnected) {
+            batteryCharacteristic->notify();
+        }
+    }
 }

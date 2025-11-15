@@ -6,12 +6,19 @@
 
 void setup()
 {
+  delay(1000);
   Serial.begin(115200);
+  //while (!Serial) { delay(10); }
   Serial.println("Initializing...");
 
   setupButton();
   initLEDs();
-  initBLE();
+  // initBLE();/
+
+  pinMode(8, OUTPUT); // LED_BUILTIN
+  pinMode(BAT_PIN, INPUT);
+
+  Serial.println("Starting up...");
 }
 
 void loop()
@@ -23,5 +30,16 @@ void loop()
     switchToNextColor();
   }
 
+  static unsigned long lastBat = 0;
+  if (millis() - lastBat > 5000) {
+    updateBatteryLevelBLE();
+    lastBat = millis();
+  }
+
   delay(10);
+
+  // digitalWrite(8, HIGH);
+  // delay(1000);
+  // digitalWrite(8, LOW);
+  // delay(1000);
 }
