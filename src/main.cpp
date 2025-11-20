@@ -13,7 +13,7 @@ void setup()
 
   setupButton();
   initLEDs();
-  // initBLE();/
+  initBLE();
 
   pinMode(8, OUTPUT); // LED_BUILTIN
   pinMode(BAT_PIN, INPUT);
