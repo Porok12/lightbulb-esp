@@ -15,9 +15,9 @@
 
 // #define DEBUG_LED LED_BUILTIN
 #define BAT_PIN 0                 // GPIO4 - Battery voltage measurement
-#define LED_PIN 2                 // GPIO pin connected to the NeoPixel
+#define LED_PIN 2                 // GPIO2 pin connected to the NeoPixel
 #define NUM_LEDS 5                // Number of LEDs in the strip
-#define BUTTON_PIN 6              // GPIO2 - Button connected to GND
+#define BUTTON_PIN 5              // GPIO5 - Button connected to GND
 #define DEVICE_NAME "KulaPrzema"  // Bluetooth Device Name
 #define FIRMWARE_VERSION "v0.1.0" // Firmware Version
 #define DEBOUNCE_DELAY 200        // Debounce time in milliseconds
