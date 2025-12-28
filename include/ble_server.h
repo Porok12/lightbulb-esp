@@ -7,5 +7,8 @@ void initBLE();
 void disableBLE();
 void debugBLE();
 void updateBatteryLevelBLE();
+float readBatteryVoltage();
+int batteryPercent(float voltage);
+void ensureBLEAdvertising();
 
 #endif

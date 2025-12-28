@@ -5,6 +5,7 @@
 
 void setupButton();
 void handleButtonPress();
+void goToDeepSleep();
 
 extern volatile bool buttonPressed;
 

@@ -20,13 +20,19 @@
 #define BUTTON_PIN 5              // GPIO5 - Button connected to GND
 #define DEVICE_NAME "KulaPrzema"  // Bluetooth Device Name
 #define FIRMWARE_VERSION "v0.1.0" // Firmware Version
-#define DEBOUNCE_DELAY 200        // Debounce time in milliseconds
+#define DEBOUNCE_DELAY 50         // Debounce time in milliseconds (stabilization)
+#define MIN_PRESS_DURATION 30     // Minimum press duration to be valid (filters micro-clicks)
+#define CLICK_MERGE_DELAY 250     // Max delay between clicks to merge them (filters short gaps)
+#define LONG_PRESS_DELAY 2000     // Long press time in milliseconds (2 seconds)
 #define RESET_BUTTON_PIN 3        // GPIO3 - Button resetting the device
 
 // BLE Commands
-#define CMD_SET_COLOR 0x01      // Set a single RGBW color
-#define CMD_SET_COLOR_SETS 0x02 // Set multiple colors
-#define CMD_DISABLE_BLE 0x03    // Disable BLE
+#define CMD_SET_COLOR 0x01           // Set a single RGBW color
+#define CMD_SET_COLOR_SETS 0x02      // Set multiple colors
+#define CMD_DISABLE_BLE 0x03         // Disable BLE
+#define CMD_SET_INDIVIDUAL_COLORS 0x04 // Set individual color for each LED
+#define CMD_SET_SLEEP_TIMER 0x05     // Set sleep timer (minutes)
+#define CMD_SET_ANIMATION 0x06       // Set animation mode
 
 // Storage namespace for Preferences API
 #define STORAGE_NAMESPACE "color_storage"

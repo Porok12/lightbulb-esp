@@ -1,25 +1,22 @@
 #include "ble_server.h"
 #include "led_control.h"
+#include "button_handler.h"
 #include "config.h"
 #include <NimBLEDevice.h>
-//#include <NimBLEOta.h>
 
 NimBLEServer *pServer = nullptr;
 NimBLECharacteristic *lightCharacteristic;
 NimBLECharacteristic *batteryCharacteristic;
 NimBLECharacteristic *firmwareCharacteristic;
 
-//111
-#define ADC_MAX 4095           // 12-bit ADC
-#define VREF 1100              // mV (ESP32-C3 waha się 1050–1150)
+#define ADC_MAX 4095
+#define VREF 1100
 
 float readBatteryVoltage() {
     int raw = analogRead(BAT_PIN);
-
-    float voltage_mv = ((float)raw / ADC_MAX) * VREF;   // mV na wejściu ADC
-    float real_battery_mv = voltage_mv * 2.0;           // dzielnik 100k/100k → *2
-
-    return real_battery_mv / 1000.0; // zwraca Volty
+    float voltage_mv = ((float)raw / ADC_MAX) * VREF;
+    float real_battery_mv = voltage_mv * 2.0;
+    return real_battery_mv / 1000.0;
 }
 
 int batteryPercent(float v) {
@@ -31,9 +28,6 @@ int batteryPercent(float v) {
     if (v >= 3.45) return 10;
     return 0;
 }
-//111
-
-//static NimBLEOta bleOta;
 
 bool deviceConnected = false;
 uint8_t batteryLevel = 0; // Simulated battery percentage (0-100%)
@@ -43,11 +37,23 @@ class MyServerCallbacks : public NimBLEServerCallbacks
     void onConnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo) override
     {
         deviceConnected = true;
+        Serial.println("📱 Device connected");
     }
 
     void onDisconnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo, int reason) override
     {
         deviceConnected = false;
+        Serial.print("🔌 Device disconnected (reason: ");
+        Serial.print(reason);
+        Serial.println(")");
+        
+        delay(500);
+        
+        NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+        if (pAdvertising != nullptr && !pAdvertising->isAdvertising()) {
+            pAdvertising->start(0, 0);
+            Serial.println("✅ Advertising restarted - device available for connection");
+        }
     }
 };
 
@@ -63,21 +69,19 @@ class LightCharacteristicCallbacks : public NimBLECharacteristicCallbacks
         Serial.print("📥 Received Data: ");
         Serial.println(receivedData.c_str());
 
-        // const uint8_t* data = reinterpret_cast<const uint8_t*>(receivedData.data());
-        // size_t length = receivedData.length();
-
         if (receivedData.empty())
             return;
 
-        uint8_t command = receivedData[0]; // First byte is the command ID
-        // uint8_t command = data[0]; // First byte is the command ID
+        uint8_t command = receivedData[0];
 
         switch (command)
         {
         case CMD_SET_COLOR:
-            if (length == 5)
-            {                                                   // Expecting 4 data bytes
-                setColorFromBytes((uint8_t *)&receivedData[1]); // Pass RGBW bytes
+            if (length == 5) {
+                setColorFromBytes((uint8_t *)&receivedData[1]);
+            } else {
+                Serial.print("❌ Invalid CMD_SET_COLOR length: ");
+                Serial.println(length);
             }
             break;
 
@@ -85,11 +89,53 @@ class LightCharacteristicCallbacks : public NimBLECharacteristicCallbacks
             if (length >= 5 && (length - 1) % 4 == 0)
             {
                 updateColorSets((uint8_t *)&receivedData[1], length - 1);
+            } else {
+                Serial.print("❌ Invalid CMD_SET_COLOR_SETS length: ");
+                Serial.println(length);
             }
             break;
 
         case CMD_DISABLE_BLE:
-            disableBLE();
+            Serial.println("🔌 CMD_DISABLE_BLE received - Going to deep sleep...");
+            goToDeepSleep();
+            break;
+
+        case CMD_SET_INDIVIDUAL_COLORS:
+            if (length >= 5 && (length - 1) % 4 == 0) {
+                size_t numLEDs = (length - 1) / 4;
+                setIndividualLEDColors((uint8_t *)&receivedData[1], numLEDs);
+            } else {
+                Serial.print("❌ Invalid CMD_SET_INDIVIDUAL_COLORS length: ");
+                Serial.println(length);
+            }
+            break;
+
+        case CMD_SET_SLEEP_TIMER:
+            if (length == 3) {
+                uint16_t minutes = (receivedData[1] << 8) | receivedData[2];
+                setSleepTimer(minutes);
+            } else {
+                Serial.print("❌ Invalid CMD_SET_SLEEP_TIMER length: ");
+                Serial.println(length);
+            }
+            break;
+
+        case CMD_SET_ANIMATION:
+            if (length >= 3) {
+                uint8_t animType = receivedData[1];
+                uint8_t speed = receivedData[2];
+                uint8_t *params = (length > 3) ? (uint8_t *)&receivedData[3] : nullptr;
+                size_t paramsLength = (length > 3) ? (length - 3) : 0;
+                setAnimation(animType, speed, params, paramsLength);
+            } else {
+                Serial.print("❌ Invalid CMD_SET_ANIMATION length: ");
+                Serial.println(length);
+            }
+            break;
+
+        default:
+            Serial.print("❌ Unknown command: 0x");
+            Serial.println(command, HEX);
             break;
         }
     }
@@ -97,19 +143,21 @@ class LightCharacteristicCallbacks : public NimBLECharacteristicCallbacks
 
 void initBLE()
 {
-    // NimBLEDevice::deinit();
-    // sleep(2000);
-
-    NimBLEDevice::init(DEVICE_NAME);
+    if (!NimBLEDevice::init(DEVICE_NAME)) {
+        Serial.println("❌ Failed to initialize BLE");
+        return;
+    }
+    
     NimBLEDevice::setPower(ESP_PWR_LVL_N0);
 
-    // NimBLEDevice::init("NimBLE OTA");
-    // bleOta.start();
-
     pServer = NimBLEDevice::createServer();
+    if (pServer == nullptr) {
+        Serial.println("❌ Failed to create BLE server");
+        return;
+    }
+    
     pServer->setCallbacks(new MyServerCallbacks());
 
-    // ✅ **Custom Light Control Service**
     NimBLEService *lightService = pServer->createService(LIGHT_SERVICE_UUID);
     lightCharacteristic = lightService->createCharacteristic(
         LIGHT_CHARACTERISTIC_UUID,
@@ -117,7 +165,6 @@ void initBLE()
     lightCharacteristic->setCallbacks(new LightCharacteristicCallbacks());
     lightService->start();
 
-    // ✅ **Battery Service (0x180F)**
     NimBLEService *batteryService = pServer->createService(BATTERY_SERVICE_UUID);
     batteryCharacteristic = batteryService->createCharacteristic(
         BATTERY_CHARACTERISTIC_UUID,
@@ -125,15 +172,12 @@ void initBLE()
     batteryCharacteristic->setValue(&batteryLevel, 1);
     batteryService->start();
 
-    // ✅ **Device Information Service (0x180A)**
     NimBLEService *deviceInfoService = pServer->createService(DEVICE_INFO_SERVICE_UUID);
     firmwareCharacteristic = deviceInfoService->createCharacteristic(
         FIRMWARE_VERSION_UUID,
         NIMBLE_PROPERTY::READ);
     firmwareCharacteristic->setValue(FIRMWARE_VERSION);
     deviceInfoService->start();
-
-    // ✅ **BLE Advertising**
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->setName(DEVICE_NAME);
     pAdvertising->addServiceUUID(lightService->getUUID());
@@ -227,11 +271,28 @@ void updateBatteryLevelBLE()
     Serial.print(batteryLevel);
     Serial.println("%)");
 
-    if (batteryCharacteristic)
+    if (batteryCharacteristic != nullptr)
     {
         batteryCharacteristic->setValue(&batteryLevel, 1);
         if (deviceConnected) {
             batteryCharacteristic->notify();
+        }
+    } else {
+        Serial.println("⚠️ Battery characteristic not initialized");
+    }
+}
+
+void ensureBLEAdvertising()
+{
+    if (pServer == nullptr) {
+        return;
+    }
+    
+    if (pServer->getConnectedCount() == 0) {
+        NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+        if (pAdvertising != nullptr && !pAdvertising->isAdvertising()) {
+            pAdvertising->start(0, 0);
+            Serial.println("✅ Advertising restarted - device available");
         }
     }
 }
